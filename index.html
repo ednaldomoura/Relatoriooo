@@ -63,18 +63,12 @@
             </button>
         </div>
 
-        <div class="grid grid-cols-2 gap-3 mb-8">
+        <div class="mb-8">
             <button
                 id="saveReportBtn"
-                class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
             >
                 Salvar Relatório
-            </button>
-            <button
-                id="registerBtn"
-                class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            >
-                Cadastrar
             </button>
         </div>
 
@@ -93,7 +87,7 @@
             const exportPdfBtn = document.getElementById('exportPdfBtn');
             const exportEmailBtn = document.getElementById('exportEmailBtn');
             const saveReportBtn = document.getElementById('saveReportBtn');
-            const registerBtn = document.getElementById('registerBtn');
+            // const registerBtn = document.getElementById('registerBtn'); // Removido
             const savedReportsContainer = document.getElementById('savedReportsContainer');
             const noReportsMessage = document.getElementById('noReportsMessage');
 
@@ -230,13 +224,7 @@
                 setCurrentDate(); // Reset date to current
             });
 
-            registerBtn.addEventListener('click', () => {
-                alert('Cadastrar clicado! (Simulação - para registro persistente em um sistema real, um backend é necessário)');
-                console.log('Registering/Creating with:', {
-                    startDate: startDateInput.value,
-                    observations: observationsInput.value
-                });
-            });
+            // Removido o event listener para o botão "Cadastrar"
 
             // --- Event Delegation for Edit and Delete Buttons ---
             savedReportsContainer.addEventListener('click', (event) => {
