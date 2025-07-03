@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Serviços</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles if needed */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            filter: invert(0.5);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h1 class="text-2xl font-semibold text-gray-800 mb-6 text-center">Relatório de Serviços</h1>
+
+        <div class="mb-4">
+            <label for="startDate" class="block text-gray-700 text-sm font-bold mb-2">Data de Início</label>
+            <div class="relative">
+                <input
+                    type="date"
+                    id="startDate"
+                    name="startDate"
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    placeholder="dd/mm/aaaa"
+                >
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <label for="observations" class="block text-gray-700 text-sm font-bold mb-2">Observações</label>
+            <textarea
+                id="observations"
+                name="observations"
+                rows="4"
+                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline resize-y"
+                placeholder="Escreva suas observações aqui..."
+            ></textarea>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3 mb-6">
+            <button
+                id="exportCsvBtn"
+                class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
+            >
+                Exportar CSV
+            </button>
+            <button
+                id="exportPdfBtn"
+                class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
+            >
+                Exportar PDF
+            </button>
+            <button
+                id="exportEmailBtn"
+                class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
+            >
+                Exportar por Email
+            </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-8">
+            <button
+                id="saveReportBtn"
+                class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            >
+                Salvar Relatório
+            </button>
+            <button
+                id="registerBtn"
+                class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            >
+                Cadastrar
+            </button>
+        </div>
+
+        <h2 class="text-xl font-semibold text-gray-800 mb-4 text-center">Relatórios Salvos</h2>
+
+        <div id="savedReportsContainer" class="space-y-4">
+            <p id="noReportsMessage" class="text-gray-500 text-center hidden">Nenhum relatório salvo ainda.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const startDateInput = document.getElementById('startDate');
+            const observationsInput = document.getElementById('observations');
+            const exportCsvBtn = document.getElementById('exportCsvBtn');
+            const exportPdfBtn = document.getElementById('exportPdfBtn');
+            const exportEmailBtn = document.getElementById('exportEmailBtn');
+            const saveReportBtn = document.getElementById('saveReportBtn');
+            const registerBtn = document.getElementById('registerBtn');
+            const savedReportsContainer = document.getElementById('savedReportsContainer');
+            const noReportsMessage = document.getElementById('noReportsMessage');
+
+            let reports = []; // Array to hold report objects
+            let editingReportIndex = -1; // -1 means not editing, otherwise it's the index of the report being edited
+
+            // Set current date for the input
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+
+            function setCurrentDate() {
+                startDateInput.value = `${year}-${month}-${day}`;
+            }
+            setCurrentDate(); // Set on initial load
+
+            // Function to render reports to the UI
+            function renderReports() {
+                savedReportsContainer.innerHTML = ''; // Clear existing reports
+                if (reports.length === 0) {
+                    noReportsMessage.classList.remove('hidden');
+                } else {
+                    noReportsMessage.classList.add('hidden');
+                    reports.forEach((report, index) => {
+                        const reportCard = `
+                            <div class="bg-gray-50 p-4 rounded-md shadow-sm border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between">
+                                <div class="mb-2 sm:mb-0">
+                                    <p class="font-semibold text-gray-900">Relatório #${index + 1}</p>
+                                    <p class="text-sm text-gray-700">Início: ${report.startDate}</p>
+                                    <p class="text-sm text-gray-700">Obs: ${report.observations}</p>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button
+                                        data-action="edit"
+                                        data-index="${index}"
+                                        class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded text-xs focus:outline-none focus:shadow-outline"
+                                    >
+                                        Editar
+                                    </button>
+                                    <button
+                                        data-action="delete"
+                                        data-index="${index}"
+                                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-xs focus:outline-none focus:shadow-outline"
+                                    >
+                                        Excluir
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        savedReportsContainer.insertAdjacentHTML('beforeend', reportCard);
+                    });
+                }
+            }
+
+            // Function to load reports from localStorage
+            function loadReports() {
+                const storedReports = localStorage.getItem('serviceReports');
+                if (storedReports) {
+                    reports = JSON.parse(storedReports);
+                }
+                renderReports();
+            }
+
+            // Function to save reports to localStorage
+            function saveReports() {
+                localStorage.setItem('serviceReports', JSON.stringify(reports));
+            }
+
+            // Load reports when the page loads
+            loadReports();
+
+            // --- Event Listeners for Buttons ---
+
+            exportCsvBtn.addEventListener('click', () => {
+                alert('Exportar CSV clicado! (Simulação - requer backend)');
+                console.log('Exporting CSV with:', {
+                    startDate: startDateInput.value,
+                    observations: observationsInput.value
+                });
+            });
+
+            exportPdfBtn.addEventListener('click', () => {
+                alert('Exportar PDF clicado! (Simulação - requer backend)');
+                console.log('Exporting PDF with:', {
+                    startDate: startDateInput.value,
+                    observations: observationsInput.value
+                });
+            });
+
+            exportEmailBtn.addEventListener('click', () => {
+                alert('Exportar por Email clicado! (Simulação - requer backend)');
+                console.log('Sending email with:', {
+                    startDate: startDateInput.value,
+                    observations: observationsInput.value
+                });
+            });
+
+            saveReportBtn.addEventListener('click', () => {
+                const startDate = startDateInput.value;
+                const observations = observationsInput.value.trim();
+
+                if (!startDate) {
+                    alert('Por favor, selecione uma Data de Início.');
+                    return;
+                }
+
+                if (observations === '') {
+                    alert('Por favor, insira algumas Observações.');
+                    return;
+                }
+
+                const newReport = { startDate, observations };
+
+                if (editingReportIndex !== -1) {
+                    // Updating an existing report
+                    reports[editingReportIndex] = newReport;
+                    alert('Relatório atualizado e registrado no navegador!');
+                    console.log('Report updated:', newReport);
+                    editingReportIndex = -1; // Reset editing state
+                    saveReportBtn.textContent = 'Salvar Relatório'; // Change button text back
+                } else {
+                    // Adding a new report
+                    reports.push(newReport);
+                    alert('Relatório salvo e registrado no navegador!');
+                    console.log('Report saved:', newReport);
+                }
+                
+                saveReports(); // Save to localStorage
+                renderReports(); // Update UI
+
+                // Clear form after saving/updating
+                observationsInput.value = '';
+                setCurrentDate(); // Reset date to current
+            });
+
+            registerBtn.addEventListener('click', () => {
+                alert('Cadastrar clicado! (Simulação - para registro persistente em um sistema real, um backend é necessário)');
+                console.log('Registering/Creating with:', {
+                    startDate: startDateInput.value,
+                    observations: observationsInput.value
+                });
+            });
+
+            // --- Event Delegation for Edit and Delete Buttons ---
+            savedReportsContainer.addEventListener('click', (event) => {
+                const target = event.target;
+                const action = target.dataset.action;
+                const index = parseInt(target.dataset.index); // Get the index
+
+                if (action === 'delete') {
+                    if (confirm(`Tem certeza que deseja excluir o Relatório #${index + 1}?`)) {
+                        reports.splice(index, 1); // Remove report from array
+                        saveReports(); // Save updated array to localStorage
+                        renderReports(); // Re-render the list
+                        alert(`Relatório #${index + 1} excluído!`);
+                        // If the deleted report was being edited, clear the form
+                        if (editingReportIndex === index) {
+                            observationsInput.value = '';
+                            setCurrentDate();
+                            editingReportIndex = -1;
+                            saveReportBtn.textContent = 'Salvar Relatório';
+                        }
+                    }
+                } else if (action === 'edit') {
+                    const reportToEdit = reports[index];
+                    startDateInput.value = reportToEdit.startDate;
+                    observationsInput.value = reportToEdit.observations;
+                    editingReportIndex = index; // Set the index of the report being edited
+                    saveReportBtn.textContent = 'Atualizar Relatório'; // Change button text
+                    alert(`Editando Relatório #${index + 1}. Altere os campos e clique em "Atualizar Relatório".`);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
