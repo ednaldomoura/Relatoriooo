@@ -87,7 +87,6 @@
             const exportPdfBtn = document.getElementById('exportPdfBtn');
             const exportEmailBtn = document.getElementById('exportEmailBtn');
             const saveReportBtn = document.getElementById('saveReportBtn');
-            // const registerBtn = document.getElementById('registerBtn'); // Removido
             const savedReportsContainer = document.getElementById('savedReportsContainer');
             const noReportsMessage = document.getElementById('noReportsMessage');
 
@@ -160,31 +159,65 @@
             // Load reports when the page loads
             loadReports();
 
-            // --- Event Listeners for Buttons ---
+            // --- Event Listeners for Export Buttons ---
 
+            // ** 1. EXPORTAR CSV (Funciona para dados do formulário atual) **
             exportCsvBtn.addEventListener('click', () => {
-                alert('Exportar CSV clicado! (Simulação - requer backend)');
-                console.log('Exporting CSV with:', {
-                    startDate: startDateInput.value,
-                    observations: observationsInput.value
-                });
+                const currentStartDate = startDateInput.value;
+                const currentObservations = observationsInput.value.trim();
+
+                if (!currentStartDate && !currentObservations) {
+                    alert('Nenhum dado no formulário para exportar para CSV.');
+                    return;
+                }
+
+                const csvHeader = "Data de Início,Observações\n";
+                const csvRow = `${currentStartDate},"${currentObservations.replace(/"/g, '""')}"\n`; // Escapar aspas duplas
+
+                const csvContent = csvHeader + csvRow;
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', `relatorio_servico_${new Date().toISOString().slice(0, 10)}.csv`);
+                link.style.visibility = 'hidden'; // Hide the link
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link); // Clean up
+                URL.revokeObjectURL(url); // Release the object URL
+
+                alert('Arquivo CSV gerado e baixado com os dados do formulário atual!');
+                console.log('CSV Exported with:', { startDate: currentStartDate, observations: currentObservations });
+                console.warn('Nota: Para exportar TODOS os relatórios salvos ou gerar CSVs complexos, um BACKEND é recomendado.');
             });
 
+            // ** 2. EXPORTAR PDF (Requer Backend para funcionalidade robusta) **
             exportPdfBtn.addEventListener('click', () => {
-                alert('Exportar PDF clicado! (Simulação - requer backend)');
-                console.log('Exporting PDF with:', {
-                    startDate: startDateInput.value,
-                    observations: observationsInput.value
+                alert('Exportar PDF clicado! Esta funcionalidade requer um BACKEND para gerar PDFs de forma robusta e com todos os dados.');
+                console.log('Dados para PDF (seriam enviados para o backend):', {
+                    currentStartDate: startDateInput.value,
+                    currentObservations: observationsInput.value,
+                    allReports: reports // Todos os relatórios salvos
                 });
+                console.warn('Sugestão: Use bibliotecas de servidor (ex: Puppeteer com Node.js, FPDF com PHP, ReportLab com Python) para gerar PDFs.');
+                console.warn('Para geração client-side limitada, bibliotecas como jsPDF ou html2canvas podem ser exploradas.');
             });
 
+            // ** 3. EXPORTAR por Email (Requer Backend) **
             exportEmailBtn.addEventListener('click', () => {
-                alert('Exportar por Email clicado! (Simulação - requer backend)');
-                console.log('Sending email with:', {
-                    startDate: startDateInput.value,
-                    observations: observationsInput.value
+                const currentStartDate = startDateInput.value;
+                const currentObservations = observationsInput.value.trim();
+
+                alert('Exportar por Email clicado! Esta funcionalidade REQUER um BACKEND para enviar e-mails de forma segura e confiável.');
+                console.log('Dados para Email (seriam enviados para o backend para envio):', {
+                    currentStartDate: currentStartDate,
+                    currentObservations: currentObservations,
+                    allReports: reports // Poderia enviar todos os relatórios como anexo ou corpo do email
                 });
+                console.warn('Sugestão: Um backend usaria serviços como SendGrid, Mailgun, AWS SES, ou um servidor SMTP para enviar o email.');
             });
+
 
             saveReportBtn.addEventListener('click', () => {
                 const startDate = startDateInput.value;
@@ -223,8 +256,6 @@
                 observationsInput.value = '';
                 setCurrentDate(); // Reset date to current
             });
-
-            // Removido o event listener para o botão "Cadastrar"
 
             // --- Event Delegation for Edit and Delete Buttons ---
             savedReportsContainer.addEventListener('click', (event) => {
