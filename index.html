@@ -6,10 +6,10 @@
     <title>Relatório de Serviços</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles if needed */
+        /* Estilos personalizados, se necessários */
         input[type="date"]::-webkit-calendar-picker-indicator {
             cursor: pointer;
-            filter: invert(0.5);
+            filter: invert(0.5); /* Torna o ícone do calendário mais visível */
         }
     </style>
 </head>
@@ -79,6 +79,7 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const startDateInput = document.getElementById('startDate');
@@ -90,23 +91,22 @@
             const savedReportsContainer = document.getElementById('savedReportsContainer');
             const noReportsMessage = document.getElementById('noReportsMessage');
 
-            let reports = []; // Array to hold report objects
-            let editingReportIndex = -1; // -1 means not editing, otherwise it's the index of the report being edited
+            let reports = []; // Array para armazenar objetos de relatório
+            let editingReportIndex = -1; // -1 significa que não está editando, caso contrário é o índice do relatório sendo editado
 
-            // Set current date for the input
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-
+            // Define a data atual para o campo de input
             function setCurrentDate() {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
                 startDateInput.value = `${year}-${month}-${day}`;
             }
-            setCurrentDate(); // Set on initial load
+            setCurrentDate(); // Define na carga inicial
 
-            // Function to render reports to the UI
+            // Função para renderizar os relatórios na UI
             function renderReports() {
-                savedReportsContainer.innerHTML = ''; // Clear existing reports
+                savedReportsContainer.innerHTML = ''; // Limpa os relatórios existentes
                 if (reports.length === 0) {
                     noReportsMessage.classList.remove('hidden');
                 } else {
@@ -142,7 +142,7 @@
                 }
             }
 
-            // Function to load reports from localStorage
+            // Função para carregar relatórios do localStorage
             function loadReports() {
                 const storedReports = localStorage.getItem('serviceReports');
                 if (storedReports) {
@@ -151,71 +151,109 @@
                 renderReports();
             }
 
-            // Function to save reports to localStorage
+            // Função para salvar relatórios no localStorage
             function saveReports() {
                 localStorage.setItem('serviceReports', JSON.stringify(reports));
             }
 
-            // Load reports when the page loads
+            // Carrega os relatórios quando a página é carregada
             loadReports();
 
-            // --- Event Listeners for Export Buttons ---
+            // --- Listeners de Eventos para os Botões de Exportação ---
 
-            // ** 1. EXPORTAR CSV (Funciona para dados do formulário atual) **
+            // ** 1. EXPORTAR CSV **
             exportCsvBtn.addEventListener('click', () => {
-                const currentStartDate = startDateInput.value;
-                const currentObservations = observationsInput.value.trim();
-
-                if (!currentStartDate && !currentObservations) {
-                    alert('Nenhum dado no formulário para exportar para CSV.');
+                if (reports.length === 0) {
+                    alert('Nenhum relatório salvo para exportar para CSV.');
                     return;
                 }
 
-                const csvHeader = "Data de Início,Observações\n";
-                const csvRow = `${currentStartDate},"${currentObservations.replace(/"/g, '""')}"\n`; // Escapar aspas duplas
+                const csvHeader = "ID,Data de Início,Observações\n";
+                const csvRows = reports.map((report, index) => {
+                    const cleanedObservations = report.observations.replace(/"/g, '""'); // Escapa aspas duplas
+                    return `${index + 1},${report.startDate},"${cleanedObservations}"`;
+                }).join('\n');
 
-                const csvContent = csvHeader + csvRow;
+                const csvContent = csvHeader + csvRows;
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
 
                 const link = document.createElement('a');
                 link.setAttribute('href', url);
-                link.setAttribute('download', `relatorio_servico_${new Date().toISOString().slice(0, 10)}.csv`);
-                link.style.visibility = 'hidden'; // Hide the link
+                link.setAttribute('download', `relatorios_servico_${new Date().toISOString().slice(0, 10)}.csv`);
+                link.style.visibility = 'hidden';
                 document.body.appendChild(link);
                 link.click();
-                document.body.removeChild(link); // Clean up
-                URL.revokeObjectURL(url); // Release the object URL
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
 
-                alert('Arquivo CSV gerado e baixado com os dados do formulário atual!');
-                console.log('CSV Exported with:', { startDate: currentStartDate, observations: currentObservations });
-                console.warn('Nota: Para exportar TODOS os relatórios salvos ou gerar CSVs complexos, um BACKEND é recomendado.');
+                alert('Arquivo CSV com todos os relatórios gerado e baixado!');
+                console.log('CSV Exported with all saved reports.');
             });
 
-            // ** 2. EXPORTAR PDF (Requer Backend para funcionalidade robusta) **
+            // ** 2. EXPORTAR PDF **
             exportPdfBtn.addEventListener('click', () => {
-                alert('Exportar PDF clicado! Esta funcionalidade requer um BACKEND para gerar PDFs de forma robusta e com todos os dados.');
-                console.log('Dados para PDF (seriam enviados para o backend):', {
-                    currentStartDate: startDateInput.value,
-                    currentObservations: observationsInput.value,
-                    allReports: reports // Todos os relatórios salvos
+                if (reports.length === 0) {
+                    alert('Nenhum relatório salvo para exportar para PDF.');
+                    return;
+                }
+
+                // Garante que a biblioteca jsPDF esteja carregada
+                if (typeof window.jsPDF === 'undefined') {
+                    alert('A biblioteca jsPDF não foi carregada. Verifique sua conexão com a internet.');
+                    return;
+                }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                doc.setFontSize(22);
+                doc.text("Relatório de Serviços", 105, 20, null, null, "center");
+
+                doc.setFontSize(12);
+                let y = 40;
+                reports.forEach((report, index) => {
+                    doc.text(`Relatório #${index + 1}`, 15, y);
+                    doc.text(`Data de Início: ${report.startDate}`, 20, y + 7);
+                    
+                    // Divide as observações em várias linhas se forem muito longas
+                    const observationsLines = doc.splitTextToSize(`Observações: ${report.observations}`, 180);
+                    doc.text(observationsLines, 20, y + 14);
+                    
+                    y += (observationsLines.length * 7) + 10; // Ajusta a posição Y para o próximo relatório
+                    if (y > 280) { // Verifica quebra de página (aproximadamente o final da página)
+                        doc.addPage();
+                        y = 20; // Redefine Y para a nova página
+                    }
                 });
-                console.warn('Sugestão: Use bibliotecas de servidor (ex: Puppeteer com Node.js, FPDF com PHP, ReportLab com Python) para gerar PDFs.');
-                console.warn('Para geração client-side limitada, bibliotecas como jsPDF ou html2canvas podem ser exploradas.');
+
+                doc.save(`relatorios_servico_${new Date().toISOString().slice(0, 10)}.pdf`); // Aciona o download
+                alert('Arquivo PDF com todos os relatórios gerado e baixado!');
+                console.log('PDF Exported with all saved reports.');
             });
 
-            // ** 3. EXPORTAR por Email (Requer Backend) **
+            // ** 3. EXPORTAR por Email **
             exportEmailBtn.addEventListener('click', () => {
-                const currentStartDate = startDateInput.value;
-                const currentObservations = observationsInput.value.trim();
+                if (reports.length === 0) {
+                    alert('Nenhum relatório salvo para enviar por e-mail.');
+                    return;
+                }
 
-                alert('Exportar por Email clicado! Esta funcionalidade REQUER um BACKEND para enviar e-mails de forma segura e confiável.');
-                console.log('Dados para Email (seriam enviados para o backend para envio):', {
-                    currentStartDate: currentStartDate,
-                    currentObservations: currentObservations,
-                    allReports: reports // Poderia enviar todos os relatórios como anexo ou corpo do email
+                const subject = encodeURIComponent("Relatórios de Serviço Exportados");
+                let body = "Aqui estão os relatórios de serviço:\n\n";
+
+                reports.forEach((report, index) => {
+                    body += `Relatório #${index + 1}:\n`;
+                    body += `  Data de Início: ${report.startDate}\n`;
+                    body += `  Observações: ${report.observations}\n\n`;
                 });
-                console.warn('Sugestão: Um backend usaria serviços como SendGrid, Mailgun, AWS SES, ou um servidor SMTP para enviar o email.');
+
+                const mailtoLink = `mailto:?subject=${subject}&body=${encodeURIComponent(body)}`;
+
+                window.location.href = mailtoLink;
+                alert('Será aberta sua aplicação de e-mail padrão com os relatórios no corpo do e-mail. Para enviar relatórios como anexo, um backend é necessário.');
+                console.log('Link de e-mail gerado com todos os relatórios salvos.');
+                console.warn('Sugestão: Um BACKEND é indispensável para anexar arquivos (CSV/PDF) ou enviar e-mails de forma programática sem a intervenção do cliente.');
             });
 
 
@@ -236,40 +274,40 @@
                 const newReport = { startDate, observations };
 
                 if (editingReportIndex !== -1) {
-                    // Updating an existing report
+                    // Atualizando um relatório existente
                     reports[editingReportIndex] = newReport;
                     alert('Relatório atualizado e registrado no navegador!');
                     console.log('Report updated:', newReport);
-                    editingReportIndex = -1; // Reset editing state
-                    saveReportBtn.textContent = 'Salvar Relatório'; // Change button text back
+                    editingReportIndex = -1; // Reseta o estado de edição
+                    saveReportBtn.textContent = 'Salvar Relatório'; // Altera o texto do botão de volta
                 } else {
-                    // Adding a new report
+                    // Adicionando um novo relatório
                     reports.push(newReport);
                     alert('Relatório salvo e registrado no navegador!');
                     console.log('Report saved:', newReport);
                 }
                 
-                saveReports(); // Save to localStorage
-                renderReports(); // Update UI
+                saveReports(); // Salva no localStorage
+                renderReports(); // Atualiza a UI
 
-                // Clear form after saving/updating
+                // Limpa o formulário após salvar/atualizar
                 observationsInput.value = '';
-                setCurrentDate(); // Reset date to current
+                setCurrentDate(); // Redefine a data para a atual
             });
 
-            // --- Event Delegation for Edit and Delete Buttons ---
+            // --- Delegação de Eventos para os Botões de Editar e Excluir ---
             savedReportsContainer.addEventListener('click', (event) => {
                 const target = event.target;
                 const action = target.dataset.action;
-                const index = parseInt(target.dataset.index); // Get the index
+                const index = parseInt(target.dataset.index); // Obtém o índice
 
                 if (action === 'delete') {
                     if (confirm(`Tem certeza que deseja excluir o Relatório #${index + 1}?`)) {
-                        reports.splice(index, 1); // Remove report from array
-                        saveReports(); // Save updated array to localStorage
-                        renderReports(); // Re-render the list
+                        reports.splice(index, 1); // Remove o relatório do array
+                        saveReports(); // Salva o array atualizado no localStorage
+                        renderReports(); // Renderiza a lista novamente
                         alert(`Relatório #${index + 1} excluído!`);
-                        // If the deleted report was being edited, clear the form
+                        // Se o relatório excluído estava sendo editado, limpa o formulário
                         if (editingReportIndex === index) {
                             observationsInput.value = '';
                             setCurrentDate();
@@ -281,8 +319,8 @@
                     const reportToEdit = reports[index];
                     startDateInput.value = reportToEdit.startDate;
                     observationsInput.value = reportToEdit.observations;
-                    editingReportIndex = index; // Set the index of the report being edited
-                    saveReportBtn.textContent = 'Atualizar Relatório'; // Change button text
+                    editingReportIndex = index; // Define o índice do relatório sendo editado
+                    saveReportBtn.textContent = 'Atualizar Relatório'; // Altera o texto do botão
                     alert(`Editando Relatório #${index + 1}. Altere os campos e clique em "Atualizar Relatório".`);
                 }
             });
