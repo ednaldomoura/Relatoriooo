@@ -6,7 +6,7 @@
     <title>Relatório de Serviços</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Estilos personalizados, se necessários */
+        /* Estilos personalizados para o input de data */
         input[type="date"]::-webkit-calendar-picker-indicator {
             cursor: pointer;
             filter: invert(0.5); /* Torna o ícone do calendário mais visível */
@@ -80,6 +80,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const startDateInput = document.getElementById('startDate');
@@ -199,8 +200,9 @@
                 }
 
                 // Garante que a biblioteca jsPDF esteja carregada
-                if (typeof window.jsPDF === 'undefined') {
-                    alert('A biblioteca jsPDF não foi carregada. Verifique sua conexão com a internet.');
+                // window.jspdf é a maneira correta de acessar a biblioteca carregada via UMD.
+                if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+                    alert('A biblioteca jsPDF não foi carregada corretamente. Verifique sua conexão com a internet.');
                     return;
                 }
 
@@ -213,6 +215,12 @@
                 doc.setFontSize(12);
                 let y = 40;
                 reports.forEach((report, index) => {
+                    // Adiciona quebra de página se não houver espaço suficiente
+                    if (y + 30 > doc.internal.pageSize.height - 20) { // 30 é uma estimativa de altura de um bloco de relatório + margem
+                        doc.addPage();
+                        y = 20; // Redefine Y para a nova página
+                    }
+
                     doc.text(`Relatório #${index + 1}`, 15, y);
                     doc.text(`Data de Início: ${report.startDate}`, 20, y + 7);
                     
@@ -221,10 +229,6 @@
                     doc.text(observationsLines, 20, y + 14);
                     
                     y += (observationsLines.length * 7) + 10; // Ajusta a posição Y para o próximo relatório
-                    if (y > 280) { // Verifica quebra de página (aproximadamente o final da página)
-                        doc.addPage();
-                        y = 20; // Redefine Y para a nova página
-                    }
                 });
 
                 doc.save(`relatorios_servico_${new Date().toISOString().slice(0, 10)}.pdf`); // Aciona o download
